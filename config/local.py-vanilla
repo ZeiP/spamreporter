@@ -1,0 +1,6 @@
+SPAMCOP_USERNAME = ''
+SPAMCOP_PASSWORD = ''
+LOCAL_DELIVERED_REGEXP = 'by ([a-z0-9]+\.webfaction.com|[a-z]+\.iki\.fi|[A-Za-z0-9\-\.]+\.outlook\.com)'
+CUSTOM_REPORT_FROM = 'abusereports@example.org'
+CUSTOM_REPORT_BCC = 'abusereports+bcc@example.org'
+SPAM_MAILDIR_PATH = '/home/user/Maildir/.learn-spam/cur/'
