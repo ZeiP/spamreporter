@@ -17,6 +17,12 @@ class SpamReporter:
       if os.path.isfile(filename):
         print('Parsing ' + filename)
         self.messages[filename] = self.do_file(filename)
+    self.sc_auth = (config.SPAMCOP_USERNAME, config.SPAMCOP_PASSWORD)
+    self.smtp = smtplib.SMTP(config.SMTP_SERVER)
+    self.smtp.connect()
+
+  def __del__(self):
+    self.smtp.quit()
 
   def deliver_to_spamcop(self, filename):
     print('---------------')
@@ -25,10 +31,8 @@ class SpamReporter:
     msg = self.messages[filename]['msg']
     ip = self.messages[filename]['ip']
 
-    sc_auth = (config.SPAMCOP_USERNAME, config.SPAMCOP_PASSWORD)
-
     data = {'action': 'submit', 'spam': str(msg), 'x1': 'Process Spam', 'verbose': 1}
-    r = requests.post('https://members.spamcop.net/sc', data=data, auth=sc_auth)
+    r = requests.post('https://members.spamcop.net/sc', data=data, auth=self.sc_auth)
 
     res = str(r.text)
 
@@ -36,7 +40,7 @@ class SpamReporter:
       url = r.url
       print('Waiting for 6 seconds to pass the delay')
       time.sleep(6)
-      r = requests.get(url, auth=sc_auth)
+      r = requests.get(url, auth=self.sc_auth)
       res = str(r.text)
 
     result = re.findall('<div class="error">(.*?)<\/div>', res, re.DOTALL)
@@ -109,7 +113,7 @@ class SpamReporter:
       print('Bailing out.')
       return False
 
-    r = requests.post('https://members.spamcop.net/sc', data=data, auth=sc_auth)
+    r = requests.post('https://members.spamcop.net/sc', data=data, auth=self.sc_auth)
     if 'sent to' in str(r.text):
       # If we didn't have a valid source abuse address, report false even though the reporting
       # itself went ok; it still require manual reporting.
@@ -206,7 +210,6 @@ class SpamReporter:
       message = message + "\n\n" + config.CUSTOM_REPORT_TEXTS[addt]
     message = message + "\n\n[ Offending message ]\n" + str(msg)
     report.set_payload(message, self.messages[filename]['charset'])
-    smtp_obj = smtplib.SMTP(config.SMTP_SERVER)
 
     for address in to.split(','):
       address = address.strip()
@@ -214,9 +217,8 @@ class SpamReporter:
         report.replace_header('To', address)
       else:
         report['To'] = address
-      smtp_obj.sendmail(report['From'], [report['To'], config.CUSTOM_REPORT_BCC], report.as_string())
+      self.smtp.sendmail(report['From'], [report['To'], config.CUSTOM_REPORT_BCC], report.as_string())
 
-    smtp_obj.quit()
     os.remove(filename)
     print()
     return True
